@@ -88,6 +88,7 @@
 
 /** This type definition defines the structure of a UDP server event handler callback function */
 typedef void (*UdpServerCallback)(
+	uint8_t dest_ip[IP_LEN], // the address the packet was sent to
     uint16_t dest_port,    ///< Port the packet was sent to
     uint8_t src_ip[IP_LEN],    ///< IP address of the sender
     uint16_t src_port,    ///< Port the packet was sent from
@@ -317,6 +318,12 @@ public:
     static void persistTcpConnection(bool persist);
 
     //udpserver.cpp
+	
+	static void udpServerListen(UdpServerCallback callback, uint8_t address[IP_LEN], uint16_t port, bool allAddresses = false);
+	static void udpServerListen(UdpServerCallback callback, uint16_t port, bool allAddresses = true);
+	static void udpServerPauseListen(uint8_t address[IP_LEN], uint16_t port);
+	static void udpServerResumeListen(uint8_t address[IP_LEN], uint16_t port);
+	
     /**   @brief  Register function to handle incoming UDP events
     *     @param  callback Function to handle event
     *     @param  port Port to listen on
@@ -380,6 +387,9 @@ public:
     static void dhcpAddOptionCallback(uint8_t option, DhcpOptionCallback callback);
 
     // dns.cpp
+	
+	static bool compareAddresses(uint8_t ip_a[IP_LEN], uint8_t ip_b[IP_LEN]);
+	
     /**   @brief  Perform DNS lookup
     *     @param  name Host name to lookup
     *     @param  fromRam Set true to indicate whether name is in RAM or in program space. Default = false

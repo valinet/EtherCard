@@ -126,14 +126,24 @@ static uint8_t eth_type_is_arp_and_my_ip(uint16_t len) {
            memcmp(gPB + ETH_ARP_DST_IP_P, EtherCard::myip, IP_LEN) == 0;
 }
 
-static uint8_t eth_type_is_ip_and_my_ip(uint16_t len) {
+static uint8_t eth_type_is_ip(uint16_t len) {
     return len >= 42 && gPB[ETH_TYPE_H_P] == ETHTYPE_IP_H_V &&
            gPB[ETH_TYPE_L_P] == ETHTYPE_IP_L_V &&
            gPB[IP_HEADER_LEN_VER_P] == 0x45 &&
-           (memcmp(gPB + IP_DST_P, EtherCard::myip, IP_LEN) == 0  //not my IP
+           (1//memcmp(gPB + IP_DST_P, EtherCard::myip, IP_LEN) == 0  //not my IP
             || (memcmp(gPB + IP_DST_P, EtherCard::broadcastip, IP_LEN) == 0) //not subnet broadcast
             || (memcmp(gPB + IP_DST_P, allOnes, IP_LEN) == 0)); //not global broadcasts
     //!@todo Handle multicast
+}
+
+static byte is_my_ip(word len) {
+	return memcmp(gPB + IP_DST_P, EtherCard::myip, 4) == 0;
+}
+
+static byte is_multicast_ip(word len) {
+  	uint32_t mask = ~*((uint32_t *)EtherCard::netmask);
+  	uint32_t dst_ip = *((uint32_t *)(gPB + IP_DST_P));
+  	return (mask - (mask & dst_ip)) == 0;
 }
 
 static void fill_ip_hdr_checksum() {
@@ -729,11 +739,21 @@ uint16_t EtherCard::packetLoop (uint16_t plen) {
         return 0;
     }
 
-    if (eth_type_is_ip_and_my_ip(plen)==0)
+    if (eth_type_is_ip(plen)==0)
     {   //Not IP so ignoring
         //!@todo Add other protocols (and make each optional at compile time)
         return 0;
     }
+	
+	if (ether.udpServerListening() && gPB[IP_PROTO_P]==IP_PROTO_UDP_V) {
+		if(ether.udpServerHasProcessedPacket(plen)) {
+			return 0;
+		}
+	}
+
+	if(is_my_ip(plen) == 0) {
+		return 0;	//not for me
+	}
 
 #if ETHERCARD_ICMP
     if (gPB[IP_PROTO_P]==IP_PROTO_ICMP_V && gPB[ICMP_TYPE_P]==ICMP_TYPE_ECHOREQUEST_V)
@@ -745,11 +765,11 @@ uint16_t EtherCard::packetLoop (uint16_t plen) {
     }
 #endif
 #if ETHERCARD_UDPSERVER
-    if (ether.udpServerListening() && gPB[IP_PROTO_P]==IP_PROTO_UDP_V)
+    /*if (ether.udpServerListening() && gPB[IP_PROTO_P]==IP_PROTO_UDP_V)
     {   //Call UDP server handler (callback) if one is defined for this packet
         if(ether.udpServerHasProcessedPacket(plen))
             return 0; //An UDP server handler (callback) has processed this packet
-    }
+    }*/
 #endif
 
     if (plen<54 || gPB[IP_PROTO_P]!=IP_PROTO_TCP_V )

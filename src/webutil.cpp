@@ -6,6 +6,10 @@
 
 #include "EtherCard.h"
 
+bool EtherCard::compareAddresses(uint8_t ip_a[4], uint8_t ip_b[4]) {
+	return (memcmp(ip_a, ip_b, 4) == 0);
+}
+
 void EtherCard::copyIp (uint8_t *dst, const uint8_t *src) {
     memcpy(dst, src, IP_LEN);
 }

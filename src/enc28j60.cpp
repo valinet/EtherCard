@@ -362,8 +362,54 @@ static void writePhy (byte address, uint16_t data) {
     while (readRegByte(MISTAT) & MISTAT_BUSY)
         ;
 }
+#include "EtherCard.h" // For ether.httpServerReply_with_flags() function
+#include "net.h" // For TCP_FLAGS_FIN_V and TCP_FLAGS_ACK_V flags
+byte* tcpPayloadPos;
+byte* endOfBuffer;
+int tcpMaxPayload;
+byte lastReceivedPacketFlag;
+int ENC28J60::packetPayloadSize;
+byte* bufferPtr;
+byte ENC28J60::readByte()
+{
+    if(bufferPtr==endOfBuffer)
+    {
+        int remaining=packetPayloadSize;
+        if(remaining>0)
+        {
+            if(remaining>tcpMaxPayload) remaining=tcpMaxPayload;
+            bufferPtr = tcpPayloadPos;
+            readBuf(remaining,bufferPtr);
+        }
+    }                    
+    packetPayloadSize--;
+    byte b=*(bufferPtr++);
+    
+    if(packetPayloadSize==0)
+    {
+        if((lastReceivedPacketFlag & TCP_FLAGS_PUSH_V)==0)
+        {
+            uint16_t tcpPayloadOffset=ether.packetLoop(packetReceive());
+            if(tcpPayloadOffset>0)
+                setBufferPtr(tcpPayloadOffset);
+            else
+                packetPayloadSize=0; // It can be changed by packetReceive()
+        }
+    }
+
+    return b;
+}
+void ENC28J60::setBufferPtr(int tcpPayloadOffset)
+{
+    ether.httpServerReplyAck();
+    tcpPayloadPos=buffer+tcpPayloadOffset;
+    bufferPtr=tcpPayloadPos;
+    packetPayloadSize-=tcpPayloadOffset;
+    tcpMaxPayload=bufferSize-tcpPayloadOffset-1;
+}
 
 byte ENC28J60::initialize (uint16_t size, const byte* macaddr, byte csPin) {
+	endOfBuffer=buffer+size-1; // New
     bufferSize = size;
     if (bitRead(SPCR, SPE) == 0)
         initSPI();
@@ -555,6 +601,7 @@ uint16_t ENC28J60::packetReceive() {
 
         gNextPacketPtr  = header.nextPacket;
         len = header.byteCount - 4; //remove the CRC count
+		packetPayloadSize=len; // New
         if (len>bufferSize-1)
             len=bufferSize-1;
         if ((header.status & 0x80)==0)
@@ -566,6 +613,7 @@ uint16_t ENC28J60::packetReceive() {
 
         writeOp(ENC28J60_BIT_FIELD_SET, ECON2, ECON2_PKTDEC);
     }
+	lastReceivedPacketFlag=buffer[TCP_FLAGS_P]; // New
     return len;
 }
 

@@ -49,6 +49,10 @@ public:
     *     @note   Configures Arduino pins as input / output, etc.
     */
     static void initSPI ();
+	
+	static int packetPayloadSize;
+	static byte readByte();
+	static void setBufferPtr(int TCPPayloadPos);
 
     /**   @brief  Initialise network interface
     *     @param  size Size of data buffer

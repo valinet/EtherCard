@@ -393,6 +393,13 @@ void EtherCard::udpPrepare (uint16_t sport, const uint8_t *dip, uint16_t dport) 
     // multicast or broadcast address, https://github.com/njh/EtherCard/issues/59
     if ((dip[0] & 0xF0) == 0xE0 || *((unsigned long*) dip) == 0xFFFFFFFF || !memcmp(broadcastip,dip,IP_LEN))
         EtherCard::copyMac(gPB + ETH_DST_MAC, allOnes);
+	
+	if (dip[0] == 224 && dip[1] == 0 && dip[2] == 0 && dip[3] == 251)
+	{
+		uint8_t IPv4mcast_fb[] = { 0x01, 0x00, 0x5e, 0x00, 0x00, 0xfb };
+		EtherCard::copyMac(gPB + ETH_DST_MAC, IPv4mcast_fb);
+	}
+	
     gPB[ETH_TYPE_H_P] = ETHTYPE_IP_H_V;
     gPB[ETH_TYPE_L_P] = ETHTYPE_IP_L_V;
     memcpy_P(gPB + IP_P,iphdr,sizeof iphdr);

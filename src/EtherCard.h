@@ -47,7 +47,7 @@
 *   still compile but the program will not work. Saves about 60 bytes SRAM and
 *   1550 bytes flash.
 */
-#define ETHERCARD_DHCP 1
+#define ETHERCARD_DHCP 0
 
 /** Enable client connections.
 * Setting this to zero means that the program cannot issue TCP client requests

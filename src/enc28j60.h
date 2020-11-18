@@ -197,7 +197,7 @@ typedef ENC28J60 Ethernet; //!< Define alias Ethernet for ENC28J60
 *   this to 1 these packages will be retried a fixed number of times. Costs about 150bytes
 *   of flash.
 */
-#define ETHERCARD_RETRY_LATECOLLISIONS 0
+#define ETHERCARD_RETRY_LATECOLLISIONS 1
 
 /** Enable pipelining of packet transmissions.
 *   If enabled the packetSend function will not block/wait until the packet is actually
